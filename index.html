@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>蓝色大肥鱼</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100svh; display: grid; place-items: center; background: #f1f6ff; color: #14396b; font-family: system-ui, sans-serif; padding: 24px; }
+    main { width: min(100%, 780px); text-align: center; }
+    img { display: block; width: 100%; height: auto; border-radius: 24px; background: white; box-shadow: 0 16px 60px #163d6c12; }
+    button { border: 0; border-radius: 12px; padding: 13px 28px; background: #214e93; color: white; font: inherit; font-weight: 600; cursor: pointer; }
+    #show-key { margin-top: 24px; }
+    button:hover { background: #163b74; }
+    button:focus-visible { outline: 3px solid #7aaaf0; outline-offset: 4px; }
+    dialog { width: min(90vw, 560px); border: 0; border-radius: 20px; padding: 28px; color: #14396b; box-shadow: 0 24px 100px #10274740; }
+    dialog::backdrop { background: #152e5266; backdrop-filter: blur(4px); }
+    h2 { margin: 0 0 18px; font-size: 22px; }
+    pre { padding: 18px; background: #f1f6ff; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 50vh; overflow: auto; font-size: 15px; }
+    input { width: 100%; margin: 10px 0 16px; padding: 12px; border: 1px solid #a9bdd8; border-radius: 10px; font: inherit; }
+    #verification-error { color: #b3261e; }
+    .actions { display: flex; justify-content: flex-end; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/fish.gif" alt="蓝色大肥鱼动态图片" width="740" height="550">
+    <button id="show-key" type="button">API KEY</button>
+  </main>
+  <dialog id="key-dialog" aria-labelledby="dialog-title">
+    <h2 id="dialog-title">API KEY</h2>
+    <form id="verify-form">
+      <label for="company">请输入公司缩写</label>
+      <input id="company" name="company" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="100" required>
+      <p id="verification-error" role="alert"></p>
+      <button id="verify-button" type="submit">验证并查看</button>
+    </form>
+    <pre id="key-content" aria-live="polite" hidden></pre>
+    <form method="dialog" class="actions"><button>关闭</button></form>
+  </dialog>
+  <script>
+    const dialog = document.querySelector('#key-dialog');
+    const content = document.querySelector('#key-content');
+    const form = document.querySelector('#verify-form');
+    const company = document.querySelector('#company');
+    const errorMessage = document.querySelector('#verification-error');
+    const verifyButton = document.querySelector('#verify-button');
+    let request;
+    document.querySelector('#show-key').addEventListener('click', () => {
+      form.reset();
+      form.hidden = false;
+      content.hidden = true;
+      content.textContent = '';
+      errorMessage.textContent = '';
+      dialog.showModal();
+      company.focus();
+    });
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      request?.abort();
+      const controller = new AbortController();
+      request = controller;
+      verifyButton.disabled = true;
+      errorMessage.textContent = '正在验证…';
+      try {
+        const response = await fetch('/api/key', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ company: company.value }),
+          cache: 'no-store',
+          signal: controller.signal
+        });
+        const value = await response.text();
+        if (!response.ok) throw new Error(value);
+        if (dialog.open && request === controller) {
+          form.hidden = true;
+          company.value = '';
+          content.hidden = false;
+          content.textContent = value || '文件内容为空';
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError' && dialog.open && request === controller) {
+          errorMessage.textContent = error.message || '读取失败，请检查本地服务。';
+        }
+      } finally {
+        if (request === controller) verifyButton.disabled = false;
+      }
+    });
+    dialog.addEventListener('close', () => {
+      request?.abort();
+      request = undefined;
+      verifyButton.disabled = false;
+      form.reset();
+      content.textContent = '';
+      errorMessage.textContent = '';
+    });
+  </script>
+</body>
+</html>

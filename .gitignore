@@ -1,0 +1,7 @@
+API_KEY
+.env
+.env.*
+.vercel/
+__pycache__/
+*.py[cod]
+.DS_Store

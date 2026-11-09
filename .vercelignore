@@ -1,0 +1,9 @@
+.git
+.env
+.env.*
+API_KEY
+server.py
+README.md
+__pycache__
+work
+tests
